@@ -31,7 +31,7 @@ class OrderController extends Controller
     public function history($id)
     {
         $history = OrderStatusHistory::where('order_id', $id)
-            ->orderBy('created_at', 'desc')
+            ->orderBy('changed_at', 'desc')
             ->get();
 
         return response()->json([
