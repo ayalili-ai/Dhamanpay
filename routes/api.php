@@ -1,3 +1,5 @@
+<?php
+
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\WalletController;
 
