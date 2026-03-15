@@ -38,4 +38,22 @@ class OrderController extends Controller
             'data' => $history
         ]);
     }
+    public function confirm($id){
+        try {
+            $userId = 1; // temporary for testing
+
+            \DB::select('SELECT escrow_freeze(?, ?)', [$id, $userId]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order confirmed and escrow frozen'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+    
 }
