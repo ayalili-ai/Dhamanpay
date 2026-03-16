@@ -55,5 +55,50 @@ class OrderController extends Controller
             ], 500);
         }
     }
+
+    public function ship($id){
+        try {
+            $courierId = 1; // temporary for testing
+
+            \DB::select('SELECT order_ship(?, ?)', [$id, $courierId]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order shipped successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function submitProof($id){
+        try {
+            $courierId = 1; // temporary for testing
+            $proofUrl = 'https://example.com/proof.jpg';
+
+            \DB::select(
+                'SELECT order_submit_proof(?, ?, ?)',
+                [$id, $courierId, $proofUrl]
+            );
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Delivery proof submitted'
+            ]);
+
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+
+        }
+    }
     
 }
+
