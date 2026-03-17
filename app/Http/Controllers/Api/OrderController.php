@@ -99,6 +99,54 @@ class OrderController extends Controller
 
         }
     }
+
+    public function dispute($id){
+        try {
+
+            $userId = 1; // temporary for testing
+            $reason = 'NOT_DELIVERED'; // temporary for testing
+
+            \DB::select(
+                'SELECT dispute_open(?, ?, ?)',
+                [$id, $userId, $reason]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Dispute opened successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function release($id){
+        try {
+            $adminId = 1; // temporary for testing
+
+            \DB::select(
+                'SELECT escrow_release(?, ?)',
+                [$id, $adminId]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Escrow released successfully'
+            ]);
+        } 
+        catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    
     
 }
 
