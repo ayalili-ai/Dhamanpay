@@ -104,7 +104,7 @@ class OrderController extends Controller
         try {
 
             $userId = 1; // temporary for testing
-            $reason = 'NOT_DELIVERED'; // temporary for testing
+            $reason = 'NOT_RECEIVED'; // temporary for testing
 
             \DB::select(
                 'SELECT dispute_open(?, ?, ?)',
@@ -138,6 +138,51 @@ class OrderController extends Controller
             ]);
         } 
         catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function refund($id){
+        try {
+            $adminId = 1; // temporary for testing
+
+            \DB::select(
+                'SELECT escrow_refund(?, ?)',
+                [$id, $adminId]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Refund processed successfully'
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function rejectDispute($id){
+        try {
+            $adminId = 1; // temporary for testing
+            $note = 'Dispute rejected after review'; // temporary for testing
+
+            \DB::select(
+                'SELECT dispute_reject(?, ?, ?)',
+                [$id, $adminId, $note]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Dispute rejected successfully'
+            ]);
+
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
