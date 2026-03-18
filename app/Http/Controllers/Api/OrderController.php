@@ -9,6 +9,17 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    public function index(){
+        $orders = \App\Models\Order::select(
+            'id',
+            'order_code',
+            'status',
+            'amount'
+        )->get();
+
+        return response()->json($orders);
+    }
+
     public function show($id)
     {
         $order = Order::where('id', $id)->first();
@@ -182,6 +193,31 @@ class OrderController extends Controller
                 'message' => 'Dispute rejected successfully'
             ]);
 
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function store(Request $request){
+         try {
+            $order = \App\Models\Order::create([
+                'order_code' => $request->order_code,
+                'customer_id' => $request->customer_id,
+                'merchant_id' => $request->merchant_id,
+                'courier_id' => $request->courier_id,
+                'amount' => $request->amount,
+                'status' => 'CREATED',
+                'delivery_address' => $request->delivery_address
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order created',
+                'data' => $order
+            ]);
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,

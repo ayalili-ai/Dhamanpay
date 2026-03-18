@@ -51,5 +51,14 @@ public function dispute()
     return $this->hasOne(Dispute::class, 'order_id');
 }
 
+protected $fillable = [
+    'order_code',
+    'customer_id',
+    'merchant_id',
+    'courier_id',
+    'amount',
+    'status',
+    'delivery_address',
+];
 
 }
