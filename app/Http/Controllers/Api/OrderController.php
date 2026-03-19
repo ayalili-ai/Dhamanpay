@@ -9,23 +9,29 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    //this function fetches all order whith selected fields:
     public function index(){
-        $orders = \App\Models\Order::select(
+        $orders = Order::select(
             'id',
             'order_code',
             'status',
             'amount'
         )->get();
 
-        return response()->json($orders);
+        return response()->json([
+            'success' => true,
+            'message' => 'Orders fetched successfully',
+            'data' => $orders
+        ]);
     }
 
     public function show($id)
     {
-        $order = Order::where('id', $id)->first();
+        $order = Order::find($id);
 
         if (!$order) {
             return response()->json([
+                'success' => false,
                 'message' => 'Order not found'
             ], 404);
         }
@@ -39,6 +45,17 @@ class OrderController extends Controller
 
     public function history($id)
     {
+        //show the history of an order
+    
+        $order = Order::find($id);
+
+        if (!$order) {//check if the order exist 
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
+        
         $history = OrderStatusHistory::where('order_id', $id)
             ->orderBy('changed_at', 'desc')
             ->get();
@@ -49,9 +66,18 @@ class OrderController extends Controller
             'data' => $history
         ]);
     }
-    public function confirm($id){
+    public function confirm($id)
+    {///confirm the order 
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json([
+             'success' => false,
+             'message' => 'Order not found'
+            ], 404);
+        }
+
         try {
-            $order = \App\Models\Order::findOrFail($id);
 
             \DB::select('SELECT escrow_freeze(?, ?)', [$order->id, $order->customer_id]);
 
@@ -59,17 +85,29 @@ class OrderController extends Controller
                 'success' => true,
                 'message' => 'Order confirmed and escrow frozen'
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function ship($id){
+    public function ship($id)
+    {///ship the order 
+
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
+
         try {
-            $courierId = 1; // temporary for testing
+            $courierId = 1; // temporary for testing until i build authentification 
 
             \DB::select('SELECT order_ship(?, ?)', [$id, $courierId]);
 
@@ -78,17 +116,28 @@ class OrderController extends Controller
                 'message' => 'Order shipped successfully'
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function submitProof($id){
+    public function submitProof($id)
+    {
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
+
         try {
-            $courierId = 1; // temporary for testing
+            $courierId = 1; // temporary for testing until auth
             $proofUrl = 'https://example.com/proof.jpg';
 
             \DB::select(
@@ -101,39 +150,57 @@ class OrderController extends Controller
                 'message' => 'Delivery proof submitted'
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
 
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
             ], 500);
 
         }
     }
 
-    public function dispute($id){
+    public function dispute($id)
+    {
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
+
         try {
-
-            $order = \App\Models\Order::findOrFail($id);
-
-        \DB::select(
-            'SELECT dispute_open(?, ?, ?)',
-            [$order->id, $order->customer_id, 'NOT_RECEIVED']
-        );
+            \DB::select(
+                'SELECT dispute_open(?, ?, ?)',
+                [$order->id, $order->customer_id, 'NOT_RECEIVED']
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Dispute opened successfully'
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
-    public function release($id){
+    public function release($id)
+    {
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
         try {
             $adminId = 1; // temporary for testing
 
@@ -150,12 +217,22 @@ class OrderController extends Controller
         catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function refund($id){
+    public function refund($id)
+    {
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
         try {
             $adminId = 1; // temporary for testing
 
@@ -172,12 +249,22 @@ class OrderController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function rejectDispute($id){
+    public function rejectDispute($id)
+    {
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
         try {
             $adminId = 1; // temporary for testing
             $note = 'Dispute rejected after review'; // temporary for testing
@@ -195,20 +282,31 @@ class OrderController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
 
-    public function store(Request $request){
-         try {
-            $order = \App\Models\Order::create([
+    public function store(Request $request)
+    {
+        $request->validate([
+            'order_code' => 'required|string',
+            'customer_id' => 'required|integer',
+            'merchant_id' => 'required|integer',
+            'courier_id' => 'nullable|integer',
+            'amount' => 'required|numeric|min:1',
+            'delivery_address' => 'required|string'
+        ]);
+
+        try {
+            $order = Order::create([
                 'order_code' => $request->order_code,
                 'customer_id' => $request->customer_id,
                 'merchant_id' => $request->merchant_id,
                 'courier_id' => $request->courier_id,
                 'amount' => $request->amount,
-                'status' => 'CREATED',
+                'status' => 'CREATED', // KEEP THIS
                 'delivery_address' => $request->delivery_address
             ]);
 
@@ -216,11 +314,13 @@ class OrderController extends Controller
                 'success' => true,
                 'message' => 'Order created',
                 'data' => $order
-            ]);
+            ], 201);
+
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
             ], 500);
         }
     }
