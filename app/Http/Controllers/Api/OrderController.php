@@ -51,9 +51,9 @@ class OrderController extends Controller
     }
     public function confirm($id){
         try {
-            $userId = 1; // temporary for testing
+            $order = \App\Models\Order::findOrFail($id);
 
-            \DB::select('SELECT escrow_freeze(?, ?)', [$id, $userId]);
+            \DB::select('SELECT escrow_freeze(?, ?)', [$order->id, $order->customer_id]);
 
             return response()->json([
                 'success' => true,
@@ -114,13 +114,12 @@ class OrderController extends Controller
     public function dispute($id){
         try {
 
-            $userId = 1; // temporary for testing
-            $reason = 'NOT_RECEIVED'; // temporary for testing
+            $order = \App\Models\Order::findOrFail($id);
 
-            \DB::select(
-                'SELECT dispute_open(?, ?, ?)',
-                [$id, $userId, $reason]
-            );
+        \DB::select(
+            'SELECT dispute_open(?, ?, ?)',
+            [$order->id, $order->customer_id, 'NOT_RECEIVED']
+        );
 
             return response()->json([
                 'success' => true,
