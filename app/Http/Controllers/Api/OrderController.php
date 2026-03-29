@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class OrderController extends Controller
 {
@@ -94,8 +95,19 @@ class OrderController extends Controller
         }
     }
 
-    public function ship($id)
+    public function ship(Request $request,$id)
     {///ship the order 
+        $validator = \Validator::make($request->all(), [
+            'courier_id' => 'required|integer'
+        ]);
+        /// what if we dont insert courier id 
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
 
         $order = Order::find($id);
 
@@ -107,9 +119,8 @@ class OrderController extends Controller
         }
 
         try {
-            $courierId = 1; // temporary for testing until i build authentification 
-
-            \DB::select('SELECT order_ship(?, ?)', [$id, $courierId]);
+            
+            \DB::select('SELECT order_ship(?, ?)', [$id,$request->courier_id]);
 
             return response()->json([
                 'success' => true,
@@ -125,8 +136,21 @@ class OrderController extends Controller
         }
     }
 
-    public function submitProof($id)
-    {
+    public function submitProof(Request $request,$id)
+    {   
+        $validator = \Validator::make($request->all(), [
+            'courier_id' => 'required|integer',
+            'proof_url' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
+
         $order = Order::find($id);
 
         if (!$order) {
@@ -137,12 +161,10 @@ class OrderController extends Controller
         }
 
         try {
-            $courierId = 1; // temporary for testing until auth
-            $proofUrl = 'https://example.com/proof.jpg';
 
             \DB::select(
                 'SELECT order_submit_proof(?, ?, ?)',
-                [$id, $courierId, $proofUrl]
+                [$id,  $request->courier_id, $request->proof_url]
             );
             
             return response()->json([
@@ -191,8 +213,20 @@ class OrderController extends Controller
             ], 500);
         }
     }
-    public function release($id)
-    {
+    public function release(Request $request,$id)
+    {   
+        $validator = \Validator::make($request->all(), [
+            'admin_id' => 'required|integer'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
+
         $order = Order::find($id);
 
         if (!$order) {
@@ -202,11 +236,11 @@ class OrderController extends Controller
             ], 404);
         }
         try {
-            $adminId = 1; // temporary for testing
+            
 
             \DB::select(
                 'SELECT escrow_release(?, ?)',
-                [$id, $adminId]
+                [$id, $request->admin_id]
             );
 
             return response()->json([
@@ -223,8 +257,20 @@ class OrderController extends Controller
         }
     }
 
-    public function refund($id)
-    {
+    public function refund(Request $request,$id)
+    {   
+        $validator = Validator::make($request->all(), [
+            'admin_id' => 'required|integer'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
+
         $order = Order::find($id);
 
         if (!$order) {
@@ -234,11 +280,10 @@ class OrderController extends Controller
             ], 404);
         }
         try {
-            $adminId = 1; // temporary for testing
 
             \DB::select(
                 'SELECT escrow_refund(?, ?)',
-                [$id, $adminId]
+                [$id, $request->admin_id]
             );
 
             return response()->json([
@@ -255,9 +300,21 @@ class OrderController extends Controller
         }
     }
 
-    public function rejectDispute($id)
+    public function rejectDispute(Request $request,$id)
     {
-        $order = Order::find($id);
+        $validator = Validator::make($request->all(), [
+            'admin_id' => 'required|integer'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
+
+        $order = Order::find( $id);
 
         if (!$order) {
             return response()->json([
@@ -266,12 +323,11 @@ class OrderController extends Controller
             ], 404);
         }
         try {
-            $adminId = 1; // temporary for testing
-            $note = 'Dispute rejected after review'; // temporary for testing
+            $note = 'Dispute rejected after review'; 
 
             \DB::select(
                 'SELECT dispute_reject(?, ?, ?)',
-                [$id, $adminId, $note]
+                [$id, $request->admin_id, $note]
             );
 
             return response()->json([
@@ -290,21 +346,27 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validator = \Validator::make($request->all(), [
             'order_code' => 'required|string',
             'customer_id' => 'required|integer',
             'merchant_id' => 'required|integer',
-            'courier_id' => 'nullable|integer',
             'amount' => 'required|numeric|min:1',
             'delivery_address' => 'required|string'
         ]);
 
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
+     
         try {
             $order = Order::create([
                 'order_code' => $request->order_code,
                 'customer_id' => $request->customer_id,
                 'merchant_id' => $request->merchant_id,
-                'courier_id' => $request->courier_id,
                 'amount' => $request->amount,
                 'status' => 'CREATED', // KEEP THIS
                 'delivery_address' => $request->delivery_address

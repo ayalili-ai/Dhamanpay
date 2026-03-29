@@ -8,5 +8,5 @@ class DeliveryProof extends Model
 {
     protected $table = 'delivery_proofs';
     protected $guarded = [];
-    public $timestamps = false;
+    
 }

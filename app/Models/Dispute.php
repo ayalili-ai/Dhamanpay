@@ -12,6 +12,6 @@ class Dispute extends Model
     protected $keyType = 'int';
 
     protected $guarded = [];
-    public $timestamps = false;
+    
 
 }

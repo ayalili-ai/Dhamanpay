@@ -9,8 +9,6 @@ class WalletController extends Controller
 {
     public function byUser($user_id)
     {
-        // If your wallets table uses user_id, this is correct.
-        // If it uses something else (like owner_id), change it.
         $wallet = Wallet::where('user_id', $user_id)->first();
 
         if (!$wallet) {

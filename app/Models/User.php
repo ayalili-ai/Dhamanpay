@@ -26,15 +26,26 @@ class User extends Authenticatable
         'phone',
         'email',
         'role',
+        'store_name',
+        'commercial_register',
+        'wilaya',
+        'delivery_type',
+        'vehicle_matricule',
+        'delivery_company',
+        'admin_code',
+        'card_number',
+        'card_expiry',
+        'latitude',
+        'longitude',
+        'rating',
     ];
-    public $timestamps = false;
+    
     /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>
      */
     protected $hidden = [
-        'password',
         'remember_token',
     ];
 
@@ -47,7 +58,6 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
         ];
     }
     public function wallet()

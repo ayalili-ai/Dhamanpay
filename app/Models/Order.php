@@ -12,7 +12,7 @@ class Order extends Model
 {
     protected $table = 'orders';
     protected $guarded = [];
-    public $timestamps = false;
+    
     // Order belongs to 3 users (roles)
 public function customer()
 {
@@ -59,6 +59,7 @@ protected $fillable = [
     'amount',
     'status',
     'delivery_address',
+    'proof_pdf',
 ];
 
 }
