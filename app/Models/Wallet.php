@@ -9,4 +9,5 @@ class Wallet extends Model
     protected $table = 'wallets';
     protected $guarded = [];
     
+    const UPDATED_AT = null;
 }

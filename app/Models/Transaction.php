@@ -8,5 +8,6 @@ class Transaction extends Model
 {
     protected $table = 'transactions';
     protected $guarded = [];
+    const UPDATED_AT = null;
     
 }

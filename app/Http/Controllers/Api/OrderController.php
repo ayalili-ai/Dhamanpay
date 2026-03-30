@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
@@ -345,47 +347,80 @@ class OrderController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $validator = \Validator::make($request->all(), [
-            'order_code' => 'required|string',
-            'customer_id' => 'required|integer',
-            'merchant_id' => 'required|integer',
-            'amount' => 'required|numeric|min:1',
-            'delivery_address' => 'required|string'
-        ]);
+{
+    $validator = \Validator::make($request->all(), [
+        'order_code' => 'required|string|unique:orders,order_code',
+        'customer_id' => 'required|integer|exists:users,id',
+        'merchant_id' => 'required|integer|exists:users,id',
+        'amount' => 'required|numeric|min:1',
+        'delivery_address' => 'required|string'
+    ]);
 
-        if ($validator->fails()) {
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation error',
+            'error' => $validator->errors()
+        ], 422);
+    }
+
+    try {
+        DB::beginTransaction();
+
+        $customer = User::find($request->customer_id);
+        $merchant = User::find($request->merchant_id);
+
+        // ❌ same user
+        if ($customer->id == $merchant->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation error',
-                'error' => $validator->errors()
+                'message' => 'Customer and merchant cannot be the same user'
             ], 422);
         }
-     
-        try {
-            $order = Order::create([
-                'order_code' => $request->order_code,
-                'customer_id' => $request->customer_id,
-                'merchant_id' => $request->merchant_id,
-                'amount' => $request->amount,
-                'status' => 'CREATED', // KEEP THIS
-                'delivery_address' => $request->delivery_address
-            ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Order created',
-                'data' => $order
-            ], 201);
-
-        } catch (\Throwable $e) {
+        // wrong roles
+        if ($customer->role !== 'customer') {
             return response()->json([
                 'success' => false,
-                'message' => 'Function failed',
-                'error' => $e->getMessage()
-            ], 500);
+                'message' => 'customer_id must be a customer'
+            ], 422);
         }
+
+        if ($merchant->role !== 'merchant') {
+            return response()->json([
+                'success' => false,
+                'message' => 'merchant_id must be a merchant'
+            ], 422);
+        }
+
+        //  create order
+        $order = Order::create([
+            'order_code' => $request->order_code,
+            'customer_id' => $customer->id,
+            'merchant_id' => $merchant->id,
+            'amount' => $request->amount,
+            'status' => 'CREATED',
+            'delivery_address' => $request->delivery_address
+        ]);
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Order created successfully',
+            'data' => $order
+        ], 201);
+
+    } catch (\Throwable $e) {
+        DB::rollBack();
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Function failed',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
 
     

@@ -21,5 +21,5 @@ Route::post('/orders/{id}/dispute/reject', [OrderController::class, 'rejectDispu
 Route::post('/orders', [OrderController::class, 'store']);
 
 Route::post('/register', [AuthController::class, 'register']);
-
+Route::post('/wallets/add-money', [WalletController::class, 'addMoney']);
 
