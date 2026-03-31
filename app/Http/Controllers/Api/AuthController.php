@@ -169,4 +169,45 @@ class AuthController extends Controller
             ], 500);
         }
     }
+    public function login(Request $request)
+    {
+        // 1. Validate input
+        $validator = \Validator::make($request->all(), [
+            'phone' => 'required|string',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
+
+        // 2. Find user by phone
+        $user = \App\Models\User::where('phone', $request->phone)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        // 3. Check password
+        if (!\Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid password'
+            ], 401);
+        }
+
+        // 4. Success
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful',
+            'data' => $user
+        ], 200);
+    }   
 }

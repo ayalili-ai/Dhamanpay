@@ -23,3 +23,5 @@ Route::post('/orders', [OrderController::class, 'store']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/wallets/add-money', [WalletController::class, 'addMoney']);
 
+Route::post('/login', [AuthController::class, 'login']);
+
