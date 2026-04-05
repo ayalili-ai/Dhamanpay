@@ -170,7 +170,8 @@ class AuthController extends Controller
         }
     }
     public function login(Request $request)
-    {
+    {    
+    
         // 1. Validate input
         $validator = \Validator::make($request->all(), [
             'phone' => 'required|string',
@@ -203,11 +204,36 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // 4. Success
+        // 4. Create token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // 5. Success
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
+            'token' => $token,
             'data' => $user
         ], 200);
-    }   
+    } 
+    
+    public function me(Request $request)
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Current user fetched',
+            'data' => $user
+        ], 200);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out successfully'
+        ], 200);
+    }
 }

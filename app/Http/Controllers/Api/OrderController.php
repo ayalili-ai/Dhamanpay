@@ -217,16 +217,13 @@ class OrderController extends Controller
     }
     public function release(Request $request,$id)
     {   
-        $validator = \Validator::make($request->all(), [
-            'admin_id' => 'required|integer'
-        ]);
+        $user = $request->user();
 
-        if ($validator->fails()) {
+        if ($user->role !== 'admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation error',
-                'error' => $validator->errors()
-            ], 422);
+                'message' => 'Unauthorized: admin only'
+            ], 403);
         }
 
         $order = Order::find($id);
@@ -242,7 +239,7 @@ class OrderController extends Controller
 
             \DB::select(
                 'SELECT escrow_release(?, ?)',
-                [$id, $request->admin_id]
+                [$id, $user->id]
             );
 
             return response()->json([

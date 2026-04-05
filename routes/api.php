@@ -14,7 +14,7 @@ Route::post('/orders/{id}/confirm', [OrderController::class, 'confirm']);
 Route::post('/orders/{id}/ship', [OrderController::class, 'ship']);
 Route::post('/orders/{id}/proof', [OrderController::class, 'submitProof']);
 Route::post('/orders/{id}/dispute', [OrderController::class, 'dispute']);
-Route::post('/orders/{id}/release', [OrderController::class, 'release']);
+Route::middleware('auth:sanctum')->post('/orders/{id}/release', [OrderController::class, 'release']);
 Route::post('/orders/{id}/refund', [OrderController::class, 'refund']);
 Route::post('/orders/{id}/dispute/reject', [OrderController::class, 'rejectDispute']);
 
@@ -25,3 +25,6 @@ Route::post('/wallets/add-money', [WalletController::class, 'addMoney']);
 
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::middleware('auth:sanctum')->post('/me', [AuthController::class, 'me']);
+
+Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
