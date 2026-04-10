@@ -74,10 +74,10 @@ class OrderController extends Controller
     
         $user = $request->user();
 
-        if ($user->role !== 'customer') {
+        if ($user->role !== 'merchant') {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized: customer only'
+                'message' => 'Unauthorized: merchant only'
             ], 403);
         }
 
@@ -90,7 +90,7 @@ class OrderController extends Controller
             ], 404);
         }
         
-        if ($order->customer_id !== $user->id) {
+        if ($order->merchant_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized: not your order'

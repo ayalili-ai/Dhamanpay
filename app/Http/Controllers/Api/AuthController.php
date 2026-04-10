@@ -147,8 +147,8 @@ class AuthController extends Controller
 
             Wallet::create([
                 'user_id' => $user->id,
-                'balance' => 0,
-                'pending' => 0,
+                'available_balance' => 0,
+                'frozen_balance' => 0,
             ]);
 
             DB::commit();

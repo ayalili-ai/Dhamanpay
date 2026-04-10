@@ -7,7 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 /// api read::
 Route::get('/orders/{id}', [OrderController::class, 'show']);
 Route::get('/orders/{id}/history', [OrderController::class, 'history']);
-Route::get('/wallets/{user_id}', [WalletController::class, 'byUser']);
+Route::middleware('auth:sanctum')->get('/wallets/{user_id}', [WalletController::class, 'byUser']);
 Route::get('/orders', [OrderController::class, 'index']);
 /// api:
 Route::middleware('auth:sanctum')->post('/orders/{id}/confirm', [OrderController::class, 'confirm']);
@@ -21,8 +21,7 @@ Route::middleware('auth:sanctum')->post('/orders/{id}/dispute/reject', [OrderCon
 Route::post('/orders', [OrderController::class, 'store']);
 
 Route::post('/register', [AuthController::class, 'register']);
-Route::post('/wallets/add-money', [WalletController::class, 'addMoney']);
-
+Route::middleware('auth:sanctum')->post('/wallets/add-money', [WalletController::class, 'addMoney']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->post('/me', [AuthController::class, 'me']);

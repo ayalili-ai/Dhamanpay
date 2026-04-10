@@ -56,7 +56,7 @@ class WalletController extends Controller
             ], 404);
         }
 
-        $wallet->balance = $wallet->balance + $request->amount;
+        $wallet->available_balance = $wallet->available_balance + $request->amount;
         $wallet->save();
 
         Transaction::create([
@@ -73,8 +73,8 @@ class WalletController extends Controller
             'message' => 'Money added successfully',
             'data' => [
                 'user_id' => $wallet->user_id,
-                'balance' => $wallet->balance,
-                'pending' => $wallet->pending
+                'available_balance' => $wallet->available_balance,
+                'frozen_balance' => $wallet->frozen_balance
             ]
         ], 200);
 
