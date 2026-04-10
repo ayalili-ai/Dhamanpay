@@ -12,6 +12,7 @@ class Order extends Model
 {
     protected $table = 'orders';
     protected $guarded = [];
+    const UPDATED_AT = null;
     
     // Order belongs to 3 users (roles)
 public function customer()

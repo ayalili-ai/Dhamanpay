@@ -47,8 +47,7 @@ class WalletController extends Controller
     try {
         DB::beginTransaction();
 
-        $wallet = Wallet::where('user_id', $request->user_id)->first();
-
+        $wallet = Wallet::where('user_id', $request->user_id)->lockForUpdate()->first();
         if (!$wallet) {
             return response()->json([
                 'success' => false,
