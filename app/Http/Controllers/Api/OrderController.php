@@ -13,13 +13,62 @@ use Illuminate\Support\Facades\DB;
 class OrderController extends Controller
 {
     //this function fetches all order whith selected fields:
-    public function index(){
-        $orders = Order::select(
-            'id',
-            'order_code',
-            'status',
-            'amount'
-        )->get();
+    public function index(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role === 'admin') {
+            $orders = Order::select(
+                'id',
+                'order_code',
+                'status',
+                'amount',
+                'customer_id',
+                'merchant_id',
+                'courier_id'
+            )->orderBy('id', 'desc')->get();
+        } elseif ($user->role === 'customer') {
+            $orders = Order::select(
+                'id',
+                'order_code',
+                'status',
+                'amount',
+                'customer_id',
+                'merchant_id',
+                'courier_id'
+            )->where('customer_id', $user->id)
+             ->orderBy('id', 'desc')
+             ->get();
+        } elseif ($user->role === 'merchant') {
+            $orders = Order::select(
+                'id',
+                'order_code',
+                'status',
+                'amount',
+                'customer_id',
+                'merchant_id',
+                'courier_id'
+            )->where('merchant_id', $user->id)
+             ->orderBy('id', 'desc')
+             ->get();
+        } elseif ($user->role === 'courier') {
+            $orders = Order::select(
+                'id',
+                'order_code',
+                'status',
+                'amount',
+                'customer_id',
+                'merchant_id',
+                'courier_id'
+            )->where('courier_id', $user->id)
+             ->orderBy('id', 'desc')
+             ->get();
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized role'
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,
@@ -28,8 +77,10 @@ class OrderController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        $user = $request->user();
+
         $order = Order::find($id);
 
         if (!$order) {
@@ -39,6 +90,19 @@ class OrderController extends Controller
             ], 404);
         }
 
+        $allowed =
+            $user->role === 'admin' ||
+            $order->customer_id === $user->id ||
+            $order->merchant_id === $user->id ||
+            $order->courier_id === $user->id;
+
+        if (!$allowed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: you cannot view this order'
+            ], 403);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Order fetched',
@@ -46,19 +110,32 @@ class OrderController extends Controller
         ]);
     }
 
-    public function history($id)
+    public function history(Request $request, $id)
     {
-        //show the history of an order
-    
+        $user = $request->user();
+
         $order = Order::find($id);
 
-        if (!$order) {//check if the order exist 
+        if (!$order) {
             return response()->json([
                 'success' => false,
                 'message' => 'Order not found'
             ], 404);
         }
-        
+
+        $allowed =
+            $user->role === 'admin' ||
+            $order->customer_id === $user->id ||
+            $order->merchant_id === $user->id ||
+            $order->courier_id === $user->id;
+
+        if (!$allowed) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: you cannot view this order history'
+            ], 403);
+        }
+
         $history = OrderStatusHistory::where('order_id', $id)
             ->orderBy('changed_at', 'desc')
             ->get();
@@ -68,7 +145,7 @@ class OrderController extends Controller
             'message' => 'Order history fetched',
             'data' => $history
         ]);
-    }
+    }       
     public function confirm(Request $request, $id)
     {///confirm the order
     
@@ -378,10 +455,18 @@ class OrderController extends Controller
 
     public function store(Request $request)
 {
+    $user = $request->user();
+
+    if ($user->role !== 'merchant') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized: merchant only'
+        ], 403);
+    }
+
     $validator = \Validator::make($request->all(), [
         'order_code' => 'required|string|unique:orders,order_code',
         'customer_id' => 'required|integer|exists:users,id',
-        'merchant_id' => 'required|integer|exists:users,id',
         'amount' => 'required|numeric|min:1',
         'delivery_address' => 'required|string'
     ]);
@@ -398,36 +483,38 @@ class OrderController extends Controller
         DB::beginTransaction();
 
         $customer = User::find($request->customer_id);
-        $merchant = User::find($request->merchant_id);
 
-        // ❌ same user
-        if ($customer->id == $merchant->id) {
+        if (!$customer) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Customer not found'
+            ], 404);
+        }
+
+        if ($customer->id == $user->id) {
+            DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Customer and merchant cannot be the same user'
             ], 422);
         }
 
-        // wrong roles
         if ($customer->role !== 'customer') {
+            DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'customer_id must be a customer'
             ], 422);
         }
 
-        if ($merchant->role !== 'merchant') {
-            return response()->json([
-                'success' => false,
-                'message' => 'merchant_id must be a merchant'
-            ], 422);
-        }
-
-        //  create order
         $order = Order::create([
             'order_code' => $request->order_code,
             'customer_id' => $customer->id,
-            'merchant_id' => $merchant->id,
+            'merchant_id' => $user->id,
             'amount' => $request->amount,
             'status' => 'CREATED',
             'delivery_address' => $request->delivery_address

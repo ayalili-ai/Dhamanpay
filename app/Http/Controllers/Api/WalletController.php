@@ -10,8 +10,18 @@ use Illuminate\Support\Facades\DB;
 
 class WalletController extends Controller
 {
-    public function byUser($user_id)
+    public function byUser(Request $request, $user_id)
     {
+        
+        $user = $request->user();
+
+        if ($user->role !== 'admin' && $user->id != $user_id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: you can only view your own wallet'
+            ], 403);
+        }
+    
         $wallet = Wallet::where('user_id', $user_id)->first();
 
         if (!$wallet) {
@@ -31,6 +41,15 @@ class WalletController extends Controller
 
     public function addMoney(Request $request)
 {
+    $user = $request->user();
+
+    if ($user->role !== 'admin') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthorized: admin only'
+        ], 403);
+    }
+
     $validator = \Validator::make($request->all(), [
         'user_id' => 'required|integer|exists:users,id',
         'amount' => 'required|numeric|min:1'
@@ -48,22 +67,36 @@ class WalletController extends Controller
         DB::beginTransaction();
 
         $wallet = Wallet::where('user_id', $request->user_id)->lockForUpdate()->first();
+
         if (!$wallet) {
+            DB::rollBack();
+
             return response()->json([
                 'success' => false,
                 'message' => 'Wallet not found for this user',
                 'data' => null
             ], 404);
         }
+        
+        $before = $wallet->available_balance;
+        $after = $wallet->available_balance + $request->amount;
 
         $wallet->available_balance = $wallet->available_balance + $request->amount;
         $wallet->save();
 
         Transaction::create([
-            'user_id' => $request->user_id,
+            'user_id' => $user->id,
+            'wallet_user_id' => $wallet->user_id,
+            'order_id' => null,
             'type' => 'ADD_MONEY',
+            'tx_type' => 'ADD_MONEY',
+            'bucket' => 'AVAILABLE',
+            'direction' => 'IN',
             'amount' => $request->amount,
+            'balance_before' => $before,
+            'balance_after' => $after,
             'status' => 'SUCCESS',
+            'note' => 'Admin added money',
         ]);
 
         DB::commit();
@@ -74,7 +107,7 @@ class WalletController extends Controller
             'data' => [
                 'user_id' => $wallet->user_id,
                 'available_balance' => $wallet->available_balance,
-                'frozen_balance' => $wallet->frozen_balance
+                'frozen_balance' => $wallet->frozen_balance,
             ]
         ], 200);
 
