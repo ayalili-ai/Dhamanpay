@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Order;
+use App\Models\Dispute;
 use App\Models\OrderStatusHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -75,6 +76,7 @@ class OrderController extends Controller
             'message' => 'Orders fetched successfully',
             'data' => $orders
         ]);
+    
     }
 
     public function show(Request $request, $id)
@@ -151,10 +153,10 @@ class OrderController extends Controller
     
         $user = $request->user();
 
-        if ($user->role !== 'merchant') {
+        if ($user->role !== 'customer') {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized: merchant only'
+                'message' => 'Unauthorized: customer only'
             ], 403);
         }
 
@@ -167,7 +169,7 @@ class OrderController extends Controller
             ], 404);
         }
         
-        if ($order->merchant_id !== $user->id) {
+        if ($order->customer_id !== $user->id) {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized: not your order'
@@ -454,93 +456,210 @@ class OrderController extends Controller
     }
 
     public function store(Request $request)
-{
-    $user = $request->user();
+    {
+        $user = $request->user();
 
-    if ($user->role !== 'merchant') {
-        return response()->json([
-            'success' => false,
-            'message' => 'Unauthorized: merchant only'
-        ], 403);
-    }
-
-    $validator = \Validator::make($request->all(), [
-        'order_code' => 'required|string|unique:orders,order_code',
-        'customer_id' => 'required|integer|exists:users,id',
-        'amount' => 'required|numeric|min:1',
-        'delivery_address' => 'required|string'
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation error',
-            'error' => $validator->errors()
-        ], 422);
-    }
-
-    try {
-        DB::beginTransaction();
-
-        $customer = User::find($request->customer_id);
-
-        if (!$customer) {
-            DB::rollBack();
-
+        if ($user->role !== 'merchant') {
             return response()->json([
                 'success' => false,
-                'message' => 'Customer not found'
-            ], 404);
+                'message' => 'Unauthorized: merchant only'
+            ], 403);
         }
 
-        if ($customer->id == $user->id) {
-            DB::rollBack();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Customer and merchant cannot be the same user'
-            ], 422);
-        }
-
-        if ($customer->role !== 'customer') {
-            DB::rollBack();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'customer_id must be a customer'
-            ], 422);
-        }
-
-        $order = Order::create([
-            'order_code' => $request->order_code,
-            'customer_id' => $customer->id,
-            'merchant_id' => $user->id,
-            'amount' => $request->amount,
-            'status' => 'CREATED',
-            'delivery_address' => $request->delivery_address
+        $validator = \Validator::make($request->all(), [
+            'order_code' => 'required|string|unique:orders,order_code',
+            'customer_id' => 'required|integer|exists:users,id',
+            'amount' => 'required|numeric|min:1',
+            'delivery_address' => 'required|string'
         ]);
 
-        DB::commit();
+        if ($validator->fails()) {
+           return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $customer = User::find($request->customer_id);
+
+            if (!$customer) {
+                DB::rollBack();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Customer not found'
+                ], 404);
+            }
+
+            if ($customer->id == $user->id) {
+                DB::rollBack();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Customer and merchant cannot be the same user'
+                ], 422);
+            }
+
+            if ($customer->role !== 'customer') {
+                DB::rollBack();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'customer_id must be a customer'
+                ], 422);
+            }
+
+            $order = Order::create([
+                'order_code' => $request->order_code,
+                'customer_id' => $customer->id,
+                'merchant_id' => $user->id,
+                'amount' => $request->amount,
+                'status' => 'CREATED',
+                'delivery_address' => $request->delivery_address
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order created successfully',
+                'data' => $order
+            ], 201);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }   
+    public function listDisputes(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role === 'admin') {
+
+            $disputes = Dispute::orderBy('created_at', 'desc')->get();
+
+        } elseif ($user->role === 'customer') {
+
+            $disputes = Dispute::whereHas('order', function ($query) use ($user) {
+                $query->where('customer_id', $user->id);
+            })->orderBy('created_at', 'desc')->get();
+
+        } elseif ($user->role === 'merchant') {
+
+            $disputes = Dispute::whereHas('order', function ($query) use ($user) {
+                $query->where('merchant_id', $user->id);
+            })->orderBy('created_at', 'desc')->get();
+
+        } elseif ($user->role === 'courier') {
+
+            $disputes = Dispute::whereHas('order', function ($query) use ($user) {
+                $query->where('courier_id', $user->id);
+            })->orderBy('created_at', 'desc')->get();
+
+        } else {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized role'
+            ], 403);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Order created successfully',
-            'data' => $order
-        ], 201);
+            'message' => 'Disputes fetched successfully',
+            'data' => $disputes
+        ], 200);
+    }   
 
-    } catch (\Throwable $e) {
-        DB::rollBack();
+    public function cancel(Request $request, $id)
+    {
+        $user = $request->user();
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Function failed',
-            'error' => $e->getMessage()
-        ], 500);
+        if ($user->role !== 'customer') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: customer only'
+            ], 403);
+        }
+
+        try {
+            $result = DB::select('SELECT * FROM cancel_order_by_customer(?, ?)', [
+                $id,
+                $user->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order cancelled successfully',
+                'data' => $result
+            ]);
+
+        }catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Function failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
-}
 
+    public function searchCustomer(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'merchant' && $user->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
 
     
+        $validator = \Validator::make($request->all(), [
+            'query' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
+
+    
+        $customers = User::where('role', 'customer')
+            ->where(function ($q) use ($request) {
+                $q->where('full_name', 'like', '%' . $request->query . '%')
+                ->orWhere('phone', 'like', '%' . $request->query . '%');
+            })
+            ->select('id', 'full_name', 'phone')
+            ->get();
+
+        if ($customers->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No customers found',
+                'data' => []
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customers found',
+            'data' => $customers
+        ], 200);
+    }
     
 }
 

@@ -187,7 +187,7 @@ class AuthController extends Controller
         }
 
         // 2. Find user by phone
-        $user = \App\Models\User::where('phone', $request->phone)->first();
+        $user = User::where('phone', $request->phone)->first();
 
         if (!$user) {
             return response()->json([
@@ -234,6 +234,33 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Logged out successfully'
+        ], 200);
+    }
+
+    public function courierProfile(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'courier') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: courier only'
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+         'message' => 'Courier profile fetched successfully',
+         'data' => [
+                'id' => $user->id,
+                'full_name' => $user->full_name,
+                'phone' => $user->phone,
+                'delivery_company' => $user->delivery_company,
+                'vehicle_matricule' => $user->vehicle_matricule,
+                'rating' => $user->rating,
+                'latitude' => $user->latitude,
+                'longitude' => $user->longitude,
+            ]
         ], 200);
     }
 }

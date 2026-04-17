@@ -27,6 +27,16 @@ Route::middleware('auth:sanctum')->post('/wallets/add-money', [WalletController:
 
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware('auth:sanctum')->post('/me', [AuthController::class, 'me']);
+Route::middleware('auth:sanctum')->get('/me', [AuthController::class, 'me']);
 
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+
+Route::middleware('auth:sanctum')->get('/transactions', [WalletController::class, 'transactions']);
+
+Route::middleware('auth:sanctum')->get('/disputes', [OrderController::class, 'listDisputes']);
+
+Route::middleware('auth:sanctum')->get('/courier/profile', [AuthController::class, 'courierProfile']);
+
+Route::middleware('auth:sanctum')->post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+
+Route::middleware('auth:sanctum')->get('/customers/search', [AuthController::class, 'searchCustomer']);
