@@ -37,7 +37,7 @@ class WalletController extends Controller
             'success' => true,
             'message' => 'Wallet fetched',
             'data' => $wallet
-        ]);
+        ],200);
     }
 
     public function addMoney(Request $request)
@@ -141,8 +141,5 @@ class WalletController extends Controller
             'data' => $transactions
         ], 200);
     }
-
-
-
 
 }

@@ -17,7 +17,6 @@ Route::middleware('auth:sanctum')->post('/orders/{id}/proof', [OrderController::
 Route::middleware('auth:sanctum')->post('/orders/{id}/dispute', [OrderController::class, 'dispute']);
 Route::middleware('auth:sanctum')->post('/orders/{id}/release', [OrderController::class, 'release']);
 Route::middleware('auth:sanctum')->post('/orders/{id}/refund', [OrderController::class, 'refund']);
-Route::middleware('auth:sanctum')->post('/orders/{id}/dispute/reject', [OrderController::class, 'rejectDispute']);
 
 Route::middleware('auth:sanctum')->post('/orders', [OrderController::class, 'store']);
 

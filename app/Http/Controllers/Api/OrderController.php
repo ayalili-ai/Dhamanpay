@@ -149,8 +149,7 @@ class OrderController extends Controller
         ]);
     }       
     public function confirm(Request $request, $id)
-    {///confirm the order
-    
+    {
         $user = $request->user();
 
         if ($user->role !== 'customer') {
@@ -164,11 +163,11 @@ class OrderController extends Controller
 
         if (!$order) {
             return response()->json([
-             'success' => false,
-             'message' => 'Order not found'
+                'success' => false,
+                'message' => 'Order not found'
             ], 404);
         }
-        
+
         if ($order->customer_id !== $user->id) {
             return response()->json([
                 'success' => false,
@@ -177,13 +176,15 @@ class OrderController extends Controller
         }
 
         try {
-
-            \DB::select('SELECT escrow_freeze(?, ?)', [$order->id, $user->id]);
+            DB::select('SELECT escrow_freeze(?, ?)', [
+                $order->id,
+                $user->id
+            ]);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Order confirmed and escrow frozen'
-            ]);
+            ], 200);
 
         } catch (\Throwable $e) {
             return response()->json([
@@ -193,7 +194,6 @@ class OrderController extends Controller
             ], 500);
         }
     }
-
     public function ship(Request $request, $id)
     {
         $user = $request->user();
@@ -242,7 +242,7 @@ class OrderController extends Controller
             ], 403);
         }
 
-        $validator = \Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'proof_url' => 'required|string'
         ]);
 
@@ -292,8 +292,11 @@ class OrderController extends Controller
             ], 403);
         }
 
-        $validator = \Validator::make($request->all(), [
-            'reason' => 'required|in:NOT_RECEIVED,DAMAGED,OTHER'
+        $validator = Validator::make($request->all(), [
+            'reason' => 'required|in:NOT_RECEIVED,DAMAGED,NOT_SAME_ITEM,OTHER',
+            'dispute_description' => 'nullable|string',
+            'received_serial_number' => 'nullable|string',
+            'unboxing_video_url' => 'nullable|url',
         ]);
 
         if ($validator->fails()) {
@@ -301,6 +304,20 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => 'Validation error',
                 'error' => $validator->errors()
+            ], 422);
+        }
+
+        if (
+            $request->reason === 'NOT_SAME_ITEM' &&
+            (
+                !$request->filled('received_serial_number') ||
+                !$request->filled('unboxing_video_url')
+            )
+        ) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'received_serial_number and unboxing_video_url are required for NOT_SAME_ITEM'
             ], 422);
         }
 
@@ -321,12 +338,23 @@ class OrderController extends Controller
         }
 
         try {
-            \DB::select('SELECT dispute_open(?, ?, ?)',[$id, $user->id, $request->reason]);
+            $result = DB::select(
+                'SELECT * FROM open_dispute_v2(?, ?, ?, ?, ?, ?)',
+                [
+                    $order->id,
+                    $user->id,
+                    $request->reason,
+                    $request->dispute_description,
+                    $request->received_serial_number,
+                    $request->unboxing_video_url
+                ]
+            );
 
             return response()->json([
                 'success' => true,
-                'message' => 'Dispute opened successfully'
-            ]);
+                'message' => 'Dispute opened successfully',
+                'data' => $result[0] ?? null
+            ], 200);
 
         } catch (\Throwable $e) {
             return response()->json([
@@ -336,8 +364,8 @@ class OrderController extends Controller
             ], 500);
         }
     }
-    public function release(Request $request,$id)
-    {   
+    public function release(Request $request, $id)
+    {
         $user = $request->user();
 
         if ($user->role !== 'admin') {
@@ -345,6 +373,18 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => 'Unauthorized: admin only'
             ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'admin_note' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
         }
 
         $order = Order::find($id);
@@ -355,20 +395,24 @@ class OrderController extends Controller
                 'message' => 'Order not found'
             ], 404);
         }
-        try {
-            
 
-            \DB::select(
-                'SELECT escrow_release(?, ?)',
-                [$id, $user->id]
+        try {
+            $result = DB::select(
+                'SELECT * FROM escrow_release_v3(?, ?, ?)',
+                [
+                    $order->id,
+                    $user->id,
+                    $request->admin_note
+                ]
             );
 
             return response()->json([
                 'success' => true,
-                'message' => 'Escrow released successfully'
-            ]);
-        } 
-        catch (\Throwable $e) {
+                'message' => 'Escrow released successfully',
+                'data' => $result[0] ?? null
+            ], 200);
+
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Function failed',
@@ -386,43 +430,18 @@ class OrderController extends Controller
                 'success' => false,
                 'message' => 'Unauthorized: admin only'
             ], 403);
-        }   
-
-        $order = Order::find($id);
-
-        if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Order not found'
-            ], 404);
         }
 
-        try {
-            \DB::select(
-                'SELECT escrow_refund(?, ?)',[$id, $user->id]);
+        $validator = Validator::make($request->all(), [
+            'admin_note' => 'required|string'
+        ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Refund processed successfully'
-            ]);
-        } catch (\Throwable $e) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Function failed',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function rejectDispute(Request $request, $id)
-    {
-        $user = $request->user();
-
-        if ($user->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized: admin only'
-            ], 403);
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
         }
 
         $order = Order::find($id);
@@ -435,17 +454,21 @@ class OrderController extends Controller
         }
 
         try {
-            $note = 'Dispute rejected after review';
-
-            \DB::select(
-                'SELECT dispute_reject(?, ?, ?)',
-                [$id, $user->id, $note]
+            $result = DB::select(
+                'SELECT * FROM escrow_refund_v2(?, ?, ?)',
+                [
+                    $order->id,
+                    $user->id,
+                    $request->admin_note
+                ]
             );
 
             return response()->json([
                 'success' => true,
-                'message' => 'Dispute rejected successfully'
-            ]);
+                'message' => 'Refund processed successfully',
+                'data' => $result[0] ?? null
+            ], 200);
+
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
@@ -466,15 +489,16 @@ class OrderController extends Controller
             ], 403);
         }
 
-        $validator = \Validator::make($request->all(), [
-            'order_code' => 'required|string|unique:orders,order_code',
+        $validator = Validator::make($request->all(), [
             'customer_id' => 'required|integer|exists:users,id',
             'amount' => 'required|numeric|min:1',
-            'delivery_address' => 'required|string'
+            'delivery_address' => 'required|string',
+            'product_name' => 'required|string',
+            'expected_serial_number' => 'required|string'
         ]);
 
         if ($validator->fails()) {
-           return response()->json([
+            return response()->json([
                 'success' => false,
                 'message' => 'Validation error',
                 'error' => $validator->errors()
@@ -482,57 +506,25 @@ class OrderController extends Controller
         }
 
         try {
-            DB::beginTransaction();
-
-            $customer = User::find($request->customer_id);
-
-            if (!$customer) {
-                DB::rollBack();
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Customer not found'
-                ], 404);
-            }
-
-            if ($customer->id == $user->id) {
-                DB::rollBack();
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Customer and merchant cannot be the same user'
-                ], 422);
-            }
-
-            if ($customer->role !== 'customer') {
-                DB::rollBack();
-
-                return response()->json([
-                    'success' => false,
-                    'message' => 'customer_id must be a customer'
-                ], 422);
-            }
-
-            $order = Order::create([
-                'order_code' => $request->order_code,
-                'customer_id' => $customer->id,
-                'merchant_id' => $user->id,
-                'amount' => $request->amount,
-                'status' => 'CREATED',
-                'delivery_address' => $request->delivery_address
-            ]);
-
-            DB::commit();
+            $result = DB::select(
+                'SELECT * FROM create_order_by_merchant_v2(?, ?, ?, ?, ?, ?)',
+                [
+                    $user->id,
+                    $request->customer_id,
+                    $request->amount,
+                    $request->delivery_address,
+                    $request->product_name,
+                    $request->expected_serial_number
+                ]
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Order created successfully',
-                'data' => $order
+                'data' => $result[0] ?? null
             ], 201);
 
         } catch (\Throwable $e) {
-            DB::rollBack();
-
             return response()->json([
                 'success' => false,
                 'message' => 'Function failed',
@@ -592,19 +584,38 @@ class OrderController extends Controller
             ], 403);
         }
 
+        $order = Order::find($id);
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Order not found'
+            ], 404);
+        }
+
+        if ($order->customer_id !== $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: not your order'
+            ], 403);
+        }
+
         try {
-            $result = DB::select('SELECT * FROM cancel_order_by_customer(?, ?)', [
-                $id,
-                $user->id
-            ]);
+            $result = DB::select(
+                'SELECT * FROM cancel_order_by_customer(?, ?)',
+                [
+                    $order->id,
+                    $user->id
+                ]
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Order cancelled successfully',
-                'data' => $result
-            ]);
+                'data' => $result[0] ?? null
+            ], 200);
 
-        }catch (\Throwable $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Function failed',
@@ -612,54 +623,7 @@ class OrderController extends Controller
             ], 500);
         }
     }
-
-    public function searchCustomer(Request $request)
-    {
-        $user = $request->user();
-
-        if ($user->role !== 'merchant' && $user->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ], 403);
-        }
-
     
-        $validator = \Validator::make($request->all(), [
-            'query' => 'required|string'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation error',
-                'error' => $validator->errors()
-            ], 422);
-        }
-
-    
-        $customers = User::where('role', 'customer')
-            ->where(function ($q) use ($request) {
-                $q->where('full_name', 'like', '%' . $request->query . '%')
-                ->orWhere('phone', 'like', '%' . $request->query . '%');
-            })
-            ->select('id', 'full_name', 'phone')
-            ->get();
-
-        if ($customers->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No customers found',
-                'data' => []
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Customers found',
-            'data' => $customers
-        ], 200);
-    }
     
 }
 

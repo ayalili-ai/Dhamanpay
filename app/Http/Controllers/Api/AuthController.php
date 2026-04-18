@@ -156,7 +156,13 @@ class AuthController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'User registered successfully',
-                'data' => $user
+                'data' => [
+                    'id' => $user->id,
+                    'full_name' => $user->full_name,
+                    'phone' => $user->phone,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                ]
             ], 201);
 
         } catch (\Throwable $e) {
@@ -172,8 +178,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {    
     
-        // 1. Validate input
-        $validator = \Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'phone' => 'required|string',
             'password' => 'required|string',
         ]);
@@ -186,7 +191,7 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // 2. Find user by phone
+       
         $user = User::where('phone', $request->phone)->first();
 
         if (!$user) {
@@ -197,7 +202,7 @@ class AuthController extends Controller
         }
 
         // 3. Check password
-        if (!\Hash::check($request->password, $user->password)) {
+        if (!Hash::check($request->password, $user->password)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid password'
@@ -223,7 +228,28 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Current user fetched',
-            'data' => $user
+            'data' => [
+                'id' => $user->id,
+                'full_name' => $user->full_name,
+                'phone' => $user->phone,
+                'email' => $user->email,
+                'role' => $user->role,
+
+                // merchant
+                'store_name' => $user->store_name,
+                'commercial_register' => $user->commercial_register,
+
+                // customer
+                'wilaya' => $user->wilaya,
+                'delivery_type' => $user->delivery_type,
+
+                // courier
+                'vehicle_matricule' => $user->vehicle_matricule,
+                'delivery_company' => $user->delivery_company,
+                'rating' => $user->rating,
+                'latitude' => $user->latitude,
+                'longitude' => $user->longitude,
+            ]
         ], 200);
     }
 
@@ -261,6 +287,64 @@ class AuthController extends Controller
                 'latitude' => $user->latitude,
                 'longitude' => $user->longitude,
             ]
+        ], 200);
+    }
+
+    public function searchCustomer(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'merchant' && $user->role !== 'admin') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+    
+        $validator = Validator::make($request->all(), [
+            'full_name' => 'nullable|string',
+            'phone' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error',
+                'error' => $validator->errors()
+            ], 422);
+        }
+
+        if (!$request->filled('full_name') && !$request->filled('phone')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Provide full_name or phone'
+            ], 422);
+        }
+
+         $customers = User::where('role', 'customer')
+            ->when($request->filled('full_name'), function ($q) use ($request) {
+                $q->where('full_name', 'like', '%' . $request->full_name . '%');
+            })
+            ->when($request->filled('phone'), function ($q) use ($request) {
+                $q->where('phone', 'like', '%' . $request->phone . '%');
+            })
+            ->select('id', 'full_name', 'phone')
+            ->get();
+
+
+        if ($customers->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No customers found',
+                'data' => []
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Customers found',
+            'data' => $customers
         ], 200);
     }
 }
