@@ -1,41 +1,42 @@
 <?php
 
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\WalletController;
-use App\Http\Controllers\Api\AuthController;
-
-/// api read::
-Route::middleware('auth:sanctum')->get('/orders/{id}', [OrderController::class, 'show']);
-Route::middleware('auth:sanctum')->get('/orders/{id}/history', [OrderController::class, 'history']);
-Route::middleware('auth:sanctum')->get('/orders', [OrderController::class, 'index']);
-Route::middleware('auth:sanctum')->get('/wallets/{user_id}', [WalletController::class, 'byUser']);
-
-/// api:
-Route::middleware('auth:sanctum')->post('/orders/{id}/confirm', [OrderController::class, 'confirm']);
-Route::middleware('auth:sanctum')->post('/orders/{id}/ship', [OrderController::class, 'ship']);
-Route::middleware('auth:sanctum')->post('/orders/{id}/proof', [OrderController::class, 'submitProof']);
-Route::middleware('auth:sanctum')->post('/orders/{id}/dispute', [OrderController::class, 'dispute']);
-Route::middleware('auth:sanctum')->post('/orders/{id}/release', [OrderController::class, 'release']);
-Route::middleware('auth:sanctum')->post('/orders/{id}/refund', [OrderController::class, 'refund']);
-
-Route::middleware('auth:sanctum')->post('/orders', [OrderController::class, 'store']);
 
 Route::post('/register', [AuthController::class, 'register']);
-
-Route::middleware('auth:sanctum')->post('/wallets/add-money', [WalletController::class, 'addMoney']);
-
 Route::post('/login', [AuthController::class, 'login']);
 
-Route::middleware('auth:sanctum')->get('/me', [AuthController::class, 'me']);
+Route::middleware('auth:sanctum')->group(function () {
 
-Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+    Route::controller(AuthController::class)->group(function () {
+        Route::get('/me', 'me');
+        Route::post('/logout', 'logout');
+        Route::get('/courier/profile', 'courierProfile');
+        Route::get('/customers/search', 'searchCustomer');
+    });
 
-Route::middleware('auth:sanctum')->get('/transactions', [WalletController::class, 'transactions']);
+    Route::controller(OrderController::class)->group(function () {
+        Route::get('/orders', 'index');
+        Route::post('/orders', 'store');
+        Route::get('/orders/{id}', 'show');
+        Route::get('/orders/{id}/history', 'history');
 
-Route::middleware('auth:sanctum')->get('/disputes', [OrderController::class, 'listDisputes']);
+        Route::post('/orders/{id}/confirm', 'confirm');
+        Route::post('/orders/{id}/cancel', 'cancel');
+        Route::post('/orders/{id}/ship', 'ship');
+        Route::post('/orders/{id}/proof', 'submitProof');
+        Route::post('/orders/{id}/dispute', 'dispute');
+        Route::post('/orders/{id}/release', 'release');
+        Route::post('/orders/{id}/refund', 'refund');
 
-Route::middleware('auth:sanctum')->get('/courier/profile', [AuthController::class, 'courierProfile']);
+        Route::get('/disputes', 'listDisputes');
+    });
 
-Route::middleware('auth:sanctum')->post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
-
-Route::middleware('auth:sanctum')->get('/customers/search', [AuthController::class, 'searchCustomer']);
+    Route::controller(WalletController::class)->group(function () {
+        Route::get('/wallets/{user_id}', 'byUser');
+        Route::post('/wallets/add-money', 'addMoney');
+        Route::get('/transactions', 'transactions');
+    });
+});
