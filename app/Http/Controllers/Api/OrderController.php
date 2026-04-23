@@ -506,6 +506,16 @@ class OrderController extends Controller
         }
 
         try {
+
+            \Log::info('CREATE ORDER DEBUG', [
+                'merchant_id' => $user->id,
+                'customer_id_from_request' => $request->customer_id,
+                'amount' => $request->amount,
+                'delivery_address' => $request->delivery_address,
+                'product_name' => $request->product_name,
+            'expected_serial_number' => $request->expected_serial_number,
+            ]);
+            
             $result = DB::select(
                 'SELECT * FROM create_order_by_merchant_v2(?, ?, ?, ?, ?, ?)',
                 [
