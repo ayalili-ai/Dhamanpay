@@ -25,6 +25,8 @@ class OrderController extends Controller
                 'status',
                 'amount',
                 'product_name',
+                'delivery_address',
+                'created_at',
                 'customer_id',
                 'merchant_id',
                 'courier_id'
@@ -36,6 +38,8 @@ class OrderController extends Controller
                 'status',
                 'amount',
                 'product_name',
+                'delivery_address',
+                'created_at',
                 'customer_id',
                 'merchant_id',
                 'courier_id'
@@ -49,6 +53,8 @@ class OrderController extends Controller
                 'status',
                 'amount',
                 'product_name',
+                'delivery_address',
+                'created_at',
                 'customer_id',
                 'merchant_id',
                 'courier_id'
@@ -62,6 +68,8 @@ class OrderController extends Controller
                 'status',
                 'amount',
                 'product_name',
+                'delivery_address',
+                'created_at',
                 'customer_id',
                 'merchant_id',
                 'courier_id'
