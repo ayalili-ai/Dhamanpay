@@ -59,6 +59,7 @@ protected $fillable = [
     'courier_id',
     'amount',
     'status',
+    'product_name',
     'delivery_address',
     'proof_pdf',
 ];
