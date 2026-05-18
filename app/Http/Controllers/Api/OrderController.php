@@ -18,28 +18,56 @@ class OrderController extends Controller
     {
         $user = $request->user();
 
-        $query = Order::with('customer:id,full_name')
-            ->select(
+        if ($user->role === 'admin') {
+            $orders = Order::select(
                 'id',
                 'order_code',
                 'status',
                 'amount',
                 'product_name',
-                'delivery_address',
-                'created_at',
                 'customer_id',
                 'merchant_id',
                 'courier_id'
-            );
-
-        if ($user->role === 'admin') {
-            // admin sees all orders
+            )->orderBy('id', 'desc')->get();
         } elseif ($user->role === 'customer') {
-            $query->where('customer_id', $user->id);
+            $orders = Order::select(
+                'id',
+                'order_code',
+                'status',
+                'amount',
+                'product_name',
+                'customer_id',
+                'merchant_id',
+                'courier_id'
+            )->where('customer_id', $user->id)
+             ->orderBy('id', 'desc')
+             ->get();
         } elseif ($user->role === 'merchant') {
-            $query->where('merchant_id', $user->id);
+            $orders = Order::select(
+                'id',
+                'order_code',
+                'status',
+                'amount',
+                'product_name',
+                'customer_id',
+                'merchant_id',
+                'courier_id'
+            )->where('merchant_id', $user->id)
+             ->orderBy('id', 'desc')
+             ->get();
         } elseif ($user->role === 'courier') {
-            $query->where('courier_id', $user->id);
+            $orders = Order::select(
+                'id',
+                'order_code',
+                'status',
+                'amount',
+                'product_name',
+                'customer_id',
+                'merchant_id',
+                'courier_id'
+            )->where('courier_id', $user->id)
+             ->orderBy('id', 'desc')
+             ->get();
         } else {
             return response()->json([
                 'success' => false,
@@ -47,13 +75,12 @@ class OrderController extends Controller
             ], 403);
         }
 
-        $orders = $query->orderBy('id', 'desc')->get();
-
         return response()->json([
             'success' => true,
             'message' => 'Orders fetched successfully',
             'data' => $orders
         ]);
+    
     }
 
     public function show(Request $request, $id)
