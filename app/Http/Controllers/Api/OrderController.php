@@ -27,6 +27,8 @@ class OrderController extends Controller
                 'product_name',
                 'delivery_address',
                 'created_at',
+                'expected_serial_number',
+                'received_serial_number',
                 'customer_id',
                 'merchant_id',
                 'courier_id'
@@ -40,6 +42,8 @@ class OrderController extends Controller
                 'product_name',
                 'delivery_address',
                 'created_at',
+                'expected_serial_number',
+                'received_serial_number',
                 'customer_id',
                 'merchant_id',
                 'courier_id'
@@ -55,6 +59,8 @@ class OrderController extends Controller
                 'product_name',
                 'delivery_address',
                 'created_at',
+                'expected_serial_number',
+                'received_serial_number',
                 'customer_id',
                 'merchant_id',
                 'courier_id'
@@ -70,6 +76,8 @@ class OrderController extends Controller
                 'product_name',
                 'delivery_address',
                 'created_at',
+                'expected_serial_number',
+                'received_serial_number',
                 'customer_id',
                 'merchant_id',
                 'courier_id'

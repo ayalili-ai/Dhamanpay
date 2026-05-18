@@ -59,6 +59,8 @@ protected $fillable = [
     'courier_id',
     'amount',
     'status',
+    'expected_serial_number',
+    'received_serial_number',
     'product_name',
     'delivery_address',
     'proof_pdf',
