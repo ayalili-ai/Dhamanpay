@@ -304,7 +304,38 @@ class OrderController extends Controller
         }
     }
 
+    public function courierOrders(Request $request)
+    {
+        $user = $request->user();
 
+        if ($user->role !== 'courier') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: courier only'
+            ], 403);
+        }
+
+        $orders = Order::select(
+                'id',
+                'order_code',
+                'status',
+                'amount',
+                'product_name',
+                'delivery_address',
+                'created_at',
+                'customer_id',
+                'merchant_id',
+                'courier_id'
+            )
+            ->where('status', 'ESCROW_FROZEN')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $orders
+        ]);
+    }
     public function dispute(Request $request, $id)
     {
         $user = $request->user();

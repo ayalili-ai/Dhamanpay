@@ -15,14 +15,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', 'logout');
         Route::get('/courier/profile', 'courierProfile');
         Route::get('/customers/search', 'searchCustomer');
+        
     });
 
     Route::controller(OrderController::class)->group(function () {
         Route::get('/orders', 'index');
+        Route::get('/courier/orders', 'courierOrders');
+        
         Route::post('/orders', 'store');
+        
         Route::get('/orders/{id}', 'show');
         Route::get('/orders/{id}/history', 'history');
-
+        
         Route::post('/orders/{id}/confirm', 'confirm');
         Route::post('/orders/{id}/cancel', 'cancel');
         Route::post('/orders/{id}/ship', 'ship');
