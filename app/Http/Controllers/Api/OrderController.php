@@ -263,7 +263,7 @@ class OrderController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'proof_url' => 'required|string'
+            'proof_pdf' => 'required|file|mimes:pdf|max:5120'
         ]);
 
         if ($validator->fails()) {
@@ -284,11 +284,15 @@ class OrderController extends Controller
         }
 
         try {
-            \DB::select('SELECT order_submit_proof(?, ?, ?)',[$id, $user->id, $request->proof_url]);
+            $path = $request->file('proof_pdf')->store('proofs', 'public');
+            $proofUrl = asset('storage/' . $path);
+
+            \DB::select('SELECT order_submit_proof(?, ?, ?)',[$id, $user->id, $proofUrl]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Delivery proof submitted'
+                'message' => 'Delivery proof submitted',
+                'proof_url' => $proofUrl
             ]);
 
         } catch (\Throwable $e) {
